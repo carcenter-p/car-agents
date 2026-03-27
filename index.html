@@ -706,15 +706,18 @@ async function loadFromCloud(){
     const data = await res.json();
     const rec  = data.record || {};
     // Fill dataStore and deptStore directly
-    // Copy INTO existing objects (don't replace — keep same reference)
+    // Deep copy cloud data into existing objects
     const agentsData = rec.agents || {};
     const deptData   = rec.dept   || {};
-    // Clear existing keys
+    // Clear and repopulate
     Object.keys(dataStore).forEach(k => delete dataStore[k]);
-    Object.keys(deptStore).forEach(k  => delete deptStore[k]);
-    // Copy new data in
-    Object.assign(dataStore, agentsData);
-    Object.assign(deptStore,  deptData);
+    Object.keys(agentsData).forEach(k => {
+      dataStore[k] = JSON.parse(JSON.stringify(agentsData[k]));
+    });
+    Object.keys(deptStore).forEach(k => delete deptStore[k]);
+    Object.keys(deptData).forEach(k => {
+      deptStore[k] = JSON.parse(JSON.stringify(deptData[k]));
+    });
     window.__cloudLoaded = true;
     setStatus('✅ מחובר לענן','#22c77a');
   } catch(e) {
@@ -726,12 +729,12 @@ async function loadFromCloud(){
       if(a) {
         const pa = JSON.parse(a);
         Object.keys(dataStore).forEach(k => delete dataStore[k]);
-        Object.assign(dataStore, pa);
+        Object.keys(pa).forEach(k => { dataStore[k] = JSON.parse(JSON.stringify(pa[k])); });
       }
       if(d) {
         const pd = JSON.parse(d);
         Object.keys(deptStore).forEach(k => delete deptStore[k]);
-        Object.assign(deptStore, pd);
+        Object.keys(pd).forEach(k => { deptStore[k] = JSON.parse(JSON.stringify(pd[k])); });
       }
     } catch(e2){}
     window.__cloudLoaded = true;
