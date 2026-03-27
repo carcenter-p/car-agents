@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>קאר – מסך סוכנים 🌐 v1774611269</title>
+<title>קאר – מסך סוכנים 🌐 v1774617211</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -86,6 +86,51 @@ body{font-family:'Heebo',sans-serif;direction:rtl;min-height:100vh}
 .v-rnum { width:24px; height:24px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; }
 .vr1{background:#e8b84b;color:#000} .vr2{background:#94a3b8;color:#000} .vr3{background:#b45309;color:#fff} .vro{background:#f5f6fa;color:#8890aa;border:1px solid #dde1ee}
 #SCR-VIEW footer { text-align:center; padding:14px; color:#8890aa; font-size:11px; border-top:1px solid #dde1ee; background:#fff; margin-top:8px; }
+
+/* ── TV / FULLSCREEN MODE ── */
+#SCR-VIEW.tv-mode { background:#0a0d1a; color:#eef2ff; overflow:hidden; height:100vh; display:flex; flex-direction:column; }
+#SCR-VIEW.tv-mode header { background:#0d1117; border-color:#1e2d45; box-shadow:none; padding:10px 24px; flex-shrink:0; }
+#SCR-VIEW.tv-mode .v-logo-txt { color:#eef2ff; }
+#SCR-VIEW.tv-mode .v-month-badge { background:#161b25; border-color:#2d3a52; color:#e8b84b; }
+#SCR-VIEW.tv-mode .v-live { color:#64748b; }
+#SCR-VIEW.tv-mode .wrap { flex:1; overflow:hidden; display:flex; flex-direction:column; padding:12px 20px; max-width:100%; }
+#SCR-VIEW.tv-mode footer { display:none; }
+
+/* TV KPI row */
+#SCR-VIEW.tv-mode .v-kpi-row { grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:10px; flex-shrink:0; }
+#SCR-VIEW.tv-mode .v-kpi { background:#0d1117; border-color:#1e2d45; padding:12px; }
+#SCR-VIEW.tv-mode .v-kpi-lbl { color:#64748b; }
+#SCR-VIEW.tv-mode .v-kpi-val { font-size:22px; color:#eef2ff; }
+#SCR-VIEW.tv-mode .v-kpi-sub { color:#4a5878; }
+
+/* TV agents grid */
+#SCR-VIEW.tv-mode .v-sec-hdr { margin-bottom:8px; flex-shrink:0; }
+#SCR-VIEW.tv-mode .v-sec-title { color:#eef2ff; }
+#SCR-VIEW.tv-mode .v-agents { grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:0; flex:1; overflow:hidden; align-content:start; }
+#SCR-VIEW.tv-mode .v-card { background:#0d1117; border-color:#1e2d45; }
+#SCR-VIEW.tv-mode .v-card.vg { border-color:rgba(34,199,122,.4); }
+#SCR-VIEW.tv-mode .v-card.vy { border-color:rgba(255,176,32,.4); }
+#SCR-VIEW.tv-mode .v-card.vr { border-color:rgba(255,82,82,.3); }
+#SCR-VIEW.tv-mode .v-card-head { padding:10px 12px 6px; }
+#SCR-VIEW.tv-mode .v-card-name { font-size:14px; color:#eef2ff; }
+#SCR-VIEW.tv-mode .v-pct { font-size:32px; padding:2px 12px 6px; }
+#SCR-VIEW.tv-mode .v-prog-wrap { padding:0 12px 8px; }
+#SCR-VIEW.tv-mode .v-prog-bar { background:#1e2d45; }
+#SCR-VIEW.tv-mode .v-prog-lbls { color:#4a5878; font-size:10px; }
+#SCR-VIEW.tv-mode .v-stats { border-color:#1e2d45; }
+#SCR-VIEW.tv-mode .v-stat { padding:7px 8px; }
+#SCR-VIEW.tv-mode .v-stat+.v-stat { border-color:#1e2d45; }
+#SCR-VIEW.tv-mode .v-stat-lbl { color:#4a5878; }
+#SCR-VIEW.tv-mode .v-stat-val { color:#eef2ff; font-size:12px; }
+#SCR-VIEW.tv-mode .v-ftab { background:#161b25; border-color:#2d3a52; color:#8896b3; }
+#SCR-VIEW.tv-mode .v-ftab.on { background:#e8b84b; color:#000; }
+
+/* Hide charts and dept in TV mode */
+#SCR-VIEW.tv-mode .v-charts-row,
+#SCR-VIEW.tv-mode .v-charts-row2,
+#SCR-VIEW.tv-mode #v-dept-sec { display:none !important; }
+
+#fs-btn:hover { background:#e8b84b !important; color:#000 !important; border-color:#e8b84b !important; }
 @media(max-width:900px) { .v-kpi-row{grid-template-columns:repeat(2,1fr)} .v-dept-grid{grid-template-columns:repeat(2,1fr)} .v-charts-row,.v-charts-row2{grid-template-columns:1fr} .v-agents{grid-template-columns:1fr} }
 
 #SCR-ADMIN { background:#05070f; color:#eef2ff; min-height:calc(100vh - 50px); }
@@ -232,6 +277,7 @@ body{font-family:'Heebo',sans-serif;direction:rtl;min-height:100vh}
     <div style="display:flex;align-items:center;gap:14px">
       <div class="v-live"><div class="vdot"></div><span id="v-updated">טוען...</span></div>
       <div class="v-month-badge" id="v-month">—</div>
+      <button onclick="toggleFullscreen()" id="fs-btn" style="background:#1a1f36;border:1px solid #dde1ee;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;font-family:'Heebo',sans-serif;cursor:pointer;color:#4a5068;transition:all .2s" title="מסך מלא">⛶ מסך מלא</button>
     </div>
   </header>
   <div class="wrap">
@@ -624,7 +670,7 @@ body{font-family:'Heebo',sans-serif;direction:rtl;min-height:100vh}
 </div>
 
 <script>
-// VERSION: 1774611269
+// VERSION: 1774617211
 function goView(){
   document.getElementById('SCR-VIEW').style.display='block';
   document.getElementById('SCR-ADMIN').style.display='none';
@@ -1813,6 +1859,55 @@ function vRenderRank(ag){
   }).join('');
 }
 setInterval(vRender,5000);
+
+// ── FULLSCREEN / TV MODE ──
+function toggleFullscreen(){
+  const scr = document.getElementById('SCR-VIEW');
+  const btn = document.getElementById('fs-btn');
+  const isTV = scr.classList.toggle('tv-mode');
+  
+  if(isTV){
+    // Enter fullscreen
+    btn.textContent = '✕ צא ממסך מלא';
+    btn.style.background = '#ff5252';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#ff5252';
+    // Try browser fullscreen
+    const el = document.documentElement;
+    if(el.requestFullscreen) el.requestFullscreen();
+    else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    // Re-render for TV layout
+    setTimeout(()=>{ vRenderAgents(agents()); }, 50);
+  } else {
+    // Exit fullscreen
+    btn.textContent = '⛶ מסך מלא';
+    btn.style.background = '#1a1f36';
+    btn.style.color = '#4a5068';
+    btn.style.borderColor = '#dde1ee';
+    if(document.exitFullscreen) document.exitFullscreen();
+    else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+    setTimeout(()=>{ vRenderAgents(agents()); }, 50);
+  }
+}
+
+// Exit TV mode when pressing ESC
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){
+    const scr = document.getElementById('SCR-VIEW');
+    if(scr.classList.contains('tv-mode')) toggleFullscreen();
+  }
+});
+document.addEventListener('fullscreenchange', ()=>{
+  if(!document.fullscreenElement){
+    const scr = document.getElementById('SCR-VIEW');
+    const btn = document.getElementById('fs-btn');
+    if(scr.classList.contains('tv-mode')){
+      scr.classList.remove('tv-mode');
+      if(btn){ btn.textContent='⛶ מסך מלא'; btn.style.background='#1a1f36'; btn.style.color='#4a5068'; btn.style.borderColor='#dde1ee'; }
+      setTimeout(()=>{ vRenderAgents(agents()); }, 50);
+    }
+  }
+});
 
 // Expose to window FIRST (before async calls)
 window.saveToStorage   = saveToStorage;
