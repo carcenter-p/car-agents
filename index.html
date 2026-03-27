@@ -715,6 +715,7 @@ async function loadFromCloud(){
     // Copy new data in
     Object.assign(dataStore, agentsData);
     Object.assign(deptStore,  deptData);
+    window.__cloudLoaded = true;
     setStatus('✅ מחובר לענן','#22c77a');
   } catch(e) {
     console.warn('Cloud load failed:', e.message);
@@ -733,6 +734,7 @@ async function loadFromCloud(){
         Object.assign(deptStore, pd);
       }
     } catch(e2){}
+    window.__cloudLoaded = true;
     setStatus('⚠️ אופליין','#ffb020');
   }
   renderDashboard();
@@ -783,7 +785,13 @@ const DEFAULT_AGENTS = [
 function storeKey(y, m){ return `${y}-${m}`; }
 function getAgents(y, m){
   const k = storeKey(y,m);
-  if(!dataStore[k]) dataStore[k] = JSON.parse(JSON.stringify(DEFAULT_AGENTS));
+  // Only insert defaults if cloud data hasn't loaded yet AND no local data exists
+  if(!dataStore[k] && !window.__cloudLoaded){
+    dataStore[k] = JSON.parse(JSON.stringify(DEFAULT_AGENTS));
+  } else if(!dataStore[k]){
+    // Cloud loaded but no data for this month — return empty array
+    dataStore[k] = [];
+  }
   return dataStore[k];
 }
 function agents(){ return getAgents(currentYear, currentMonth); }
@@ -1781,9 +1789,10 @@ function vRenderRank(ag){
 setInterval(vRender,5000);
 
 buildMonthSelectors();
-renderDashboard();
-vRender();
-// Load from cloud (will re-render when done)
+window.__cloudLoaded = false;
+// Show loading state immediately
+setStatus('☁️ טוען...','#4a9eff');
+// Load from cloud FIRST, then render
 loadFromCloud();
 </script>
 </body>
