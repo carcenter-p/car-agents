@@ -683,11 +683,53 @@ let params = {
 };
 
 // ══════════════════════════════════════════════
-// JSONBIN CLOUD SYNC — SIMPLE & RELIABLE
+// SUPABASE CLOUD SYNC
 // ══════════════════════════════════════════════
-const JSONBIN_ID  = '69c63a30aa77b81da924f44b';
-const JSONBIN_KEY = '$2a$10$iuCc7LEI6KIW5xPV00U6qu6l9JLjcugjOyLyeRfMJJYlparXLkq3m';
-const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID;
+const SB_URL = 'https://figknynigjekplqcadsw.supabase.co';
+const SB_KEY = 'sb_publishable_b0ONGX9OlHXqZsV2MKIwgA_aVXKqmzw';
+const SB_TABLE = 'kar_data';
+const SB_ROW_KEY = 'main';
+
+async function sbGet() {
+  const res = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?key=eq.${SB_ROW_KEY}&select=value`, {
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY
+    }
+  });
+  if(!res.ok) throw new Error('GET ' + res.status);
+  const rows = await res.json();
+  if(!rows || rows.length === 0) return null;
+  return JSON.parse(rows[0].value);
+}
+
+async function sbSet(data) {
+  // Try update first, then insert
+  const body = JSON.stringify({ key: SB_ROW_KEY, value: JSON.stringify(data) });
+  const upd = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?key=eq.${SB_ROW_KEY}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body
+  });
+  if(upd.status === 404 || upd.status === 406) {
+    // Row doesn't exist — insert
+    await fetch(`${SB_URL}/rest/v1/${SB_TABLE}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body
+    });
+  }
+}
 
 // Single source of truth
 let dataStore = {};
@@ -703,79 +745,52 @@ function setStatus(msg, color){
 // ── LOAD ──
 async function loadFromCloud(){
   setStatus('☁️ טוען...','#4a9eff');
-  
-  // Timeout after 8 seconds
   const controller = new AbortController();
   const timeout = setTimeout(()=> controller.abort(), 8000);
-  
   try {
-    const res = await fetch(JSONBIN_URL + '/latest', {
-      signal: controller.signal,
-      headers: {'X-Master-Key': JSONBIN_KEY, 'X-Bin-Meta': 'false'}
-    });
+    const rec = await sbGet();
     clearTimeout(timeout);
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const rec  = data.record || {};
-    
-    // Load agents
-    const cloudAgents = rec.agents || {};
-    Object.keys(dataStore).forEach(k => delete dataStore[k]);
-    for(const k in cloudAgents){
-      dataStore[k] = cloudAgents[k];
+    if(rec) {
+      const cloudAgents = rec.agents || {};
+      const cloudDept   = rec.dept   || {};
+      Object.keys(dataStore).forEach(k => delete dataStore[k]);
+      for(const k in cloudAgents){ dataStore[k] = cloudAgents[k]; }
+      Object.keys(deptStore).forEach(k => delete deptStore[k]);
+      for(const k in cloudDept){ deptStore[k] = cloudDept[k]; }
     }
-    
-    // Load dept
-    const cloudDept = rec.dept || {};
-    Object.keys(deptStore).forEach(k => delete deptStore[k]);
-    for(const k in cloudDept){
-      deptStore[k] = cloudDept[k];
-    }
-    
     window.__cloudLoaded = true;
     setStatus('✅ מחובר','#22c77a');
-    console.log('Cloud loaded OK, agents:', Object.keys(dataStore));
+    console.log('Supabase loaded OK:', Object.keys(dataStore));
   } catch(e) {
     clearTimeout(timeout);
-    console.warn('Cloud failed:', e.message, '— using localStorage');
+    console.warn('Supabase failed:', e.message);
     try {
       const a = localStorage.getItem('car_agents_bk');
       const d = localStorage.getItem('car_dept_bk');
-      if(a) { const p=JSON.parse(a); for(const k in p) dataStore[k]=p[k]; }
-      if(d) { const p=JSON.parse(d); for(const k in p) deptStore[k]=p[k]; }
+      if(a){ const p=JSON.parse(a); for(const k in p) dataStore[k]=p[k]; }
+      if(d){ const p=JSON.parse(d); for(const k in p) deptStore[k]=p[k]; }
     } catch(e2){}
     window.__cloudLoaded = true;
-    setStatus('⚠️ אופליין - נתונים מקומיים','#ffb020');
+    setStatus('⚠️ אופליין','#ffb020');
   }
-  // Render AFTER data is loaded
   renderDashboard();
   vRender();
 }
 
 // ── SAVE ──
 function saveToStorage(){
-  if(!window.__cloudLoaded) return; // Never save before loading
+  if(!window.__cloudLoaded) return;
   if(__saveTimer) clearTimeout(__saveTimer);
   __saveTimer = setTimeout(async ()=>{
-    // Backup locally
+    // Local backup
     try {
       localStorage.setItem('car_agents_bk', JSON.stringify(dataStore));
       localStorage.setItem('car_dept_bk',   JSON.stringify(deptStore));
     } catch(e){}
-    // Save to cloud
+    // Supabase save
     setStatus('💾 שומר...','#4a9eff');
     try {
-      const body = JSON.stringify({agents: dataStore, dept: deptStore});
-      const res  = await fetch(JSONBIN_URL, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': JSONBIN_KEY,
-          'X-Bin-Versioning': 'false'
-        },
-        body
-      });
-      if(!res.ok) throw new Error('HTTP ' + res.status);
+      await sbSet({ agents: dataStore, dept: deptStore });
       setStatus('✅ נשמר','#22c77a');
     } catch(e) {
       console.error('Save failed:', e.message);
