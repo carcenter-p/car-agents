@@ -686,99 +686,72 @@ const JSONBIN_ID  = '69c63a30aa77b81da924f44b';
 const JSONBIN_KEY = '$2a$10$iuCc7LEI6KIW5xPV00U6qu6l9JLjcugjOyLyeRfMJJYlparXLkq3m';
 const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID;
 
-let __rawStore = {};
-let __cloudLoaded = false;
+// Simple plain objects — no Proxy needed
+let dataStore = {};
 let __saveTimer = null;
 
-// Load from cloud on startup
+function setStatus(msg, color){
+  const el = document.getElementById('cloud-status');
+  if(el){ el.textContent = msg; el.style.color = color||'#4a9eff'; }
+}
+
+// ── LOAD from cloud ──
 async function loadFromCloud(){
-  const loadingEl = document.getElementById('cloud-status');
-  if(loadingEl) loadingEl.textContent = '☁️ טוען נתונים...';
+  setStatus('☁️ טוען...','#4a9eff');
   try {
     const res = await fetch(JSONBIN_URL + '/latest', {
-      headers: { 
-        'X-Master-Key': JSONBIN_KEY,
-        'X-Bin-Meta': 'false'
-      }
+      headers: { 'X-Master-Key': JSONBIN_KEY, 'X-Bin-Meta': 'false' }
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    const record = data.record || {};
-    
-    // IMPORTANT: copy INTO existing __rawStore (don't replace — Proxy points to it)
-    Object.keys(__rawStore).forEach(k => delete __rawStore[k]);
-    const agentsCloud = record.agents || {};
-    Object.assign(__rawStore, agentsCloud);
-    
-    // Replace deptStore contents
-    Object.keys(deptStore).forEach(k => delete deptStore[k]);
-    Object.assign(deptStore, record.dept || {});
-    
-    __cloudLoaded = true;
-    if(loadingEl) { loadingEl.textContent = '✅ מחובר לענן'; loadingEl.style.color = '#22c77a'; }
+    const rec  = data.record || {};
+    // Fill dataStore and deptStore directly
+    dataStore = rec.agents || {};
+    deptStore  = rec.dept   || {};
+    setStatus('✅ מחובר לענן','#22c77a');
   } catch(e) {
     console.warn('Cloud load failed:', e.message);
-    // Fallback to localStorage
-    try{
-      const saved = localStorage.getItem("car_agents_data");
-      if(saved) {
-        const parsed = JSON.parse(saved);
-        Object.keys(__rawStore).forEach(k => delete __rawStore[k]);
-        Object.assign(__rawStore, parsed);
-      }
-      const savedDept = localStorage.getItem("car_dept_data");
-      if(savedDept) {
-        const parsedDept = JSON.parse(savedDept);
-        Object.keys(deptStore).forEach(k => delete deptStore[k]);
-        Object.assign(deptStore, parsedDept);
-      }
-    }catch(e2){}
-    if(loadingEl) { loadingEl.textContent = '⚠️ מצב אופליין'; loadingEl.style.color='#ffb020'; }
-    __cloudLoaded = true;
+    // Fallback: localStorage
+    try {
+      const a = localStorage.getItem('car_agents_data');
+      const d = localStorage.getItem('car_dept_data');
+      if(a) dataStore = JSON.parse(a);
+      if(d) deptStore  = JSON.parse(d);
+    } catch(e2){}
+    setStatus('⚠️ אופליין','#ffb020');
   }
-  // Re-render after load
   renderDashboard();
   vRender();
 }
 
-// Save to cloud (debounced — waits 1.5s after last change)
-function __saveCloud(){
+// ── SAVE to cloud (debounced 1.5s) ──
+function saveToCloud(){
   if(__saveTimer) clearTimeout(__saveTimer);
   __saveTimer = setTimeout(async ()=>{
-    const loadingEl = document.getElementById('cloud-status');
-    if(loadingEl) { loadingEl.textContent = '💾 שומר...'; loadingEl.style.color='#4a9eff'; }
+    setStatus('💾 שומר...','#4a9eff');
+    // Always backup locally first
     try {
-      const saveRes = await fetch(JSONBIN_URL, {
+      localStorage.setItem('car_agents_data', JSON.stringify(dataStore));
+      localStorage.setItem('car_dept_data',   JSON.stringify(deptStore));
+    } catch(e){}
+    try {
+      const res = await fetch(JSONBIN_URL, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'X-Master-Key': JSONBIN_KEY,
           'X-Bin-Versioning': 'false'
         },
-        body: JSON.stringify({ agents: __rawStore, dept: deptStore })
+        body: JSON.stringify({ agents: dataStore, dept: deptStore })
       });
-      if(!saveRes.ok) throw new Error('Save HTTP ' + saveRes.status);
-      if(loadingEl) { loadingEl.textContent = '✅ נשמר בענן'; loadingEl.style.color='#22c77a'; }
-      // Also save locally as backup
-      localStorage.setItem('car_agents_data', JSON.stringify(__rawStore));
-      localStorage.setItem('car_dept_data',   JSON.stringify(deptStore));
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      setStatus('✅ נשמר בענן','#22c77a');
     } catch(e) {
       console.error('Cloud save failed:', e.message);
-      if(loadingEl) { loadingEl.textContent = '⚠️ שמירה נכשלה: ' + e.message; loadingEl.style.color='#ff5252'; }
-      // Save locally as fallback
-      localStorage.setItem('car_agents_data', JSON.stringify(__rawStore));
-      localStorage.setItem('car_dept_data',   JSON.stringify(deptStore));
+      setStatus('⚠️ נשמר מקומית בלבד','#ffb020');
     }
   }, 1500);
 }
-
-let dataStore = new Proxy(__rawStore, {
-  set(target, prop, value) {
-    target[prop] = value;
-    __saveCloud();
-    return true;
-  }
-});
 
 // Default agents
 const DEFAULT_AGENTS = [
@@ -1594,7 +1567,7 @@ function downloadTemplate(){
 // DEPT SALES (מכירות מחלקתיות)
 // ══════════════════════════════════════════════
 // deptStore[storeKey] = { general:[{id,desc,amount},...], tires:[...], batteries:[...], scrap:[...] }
-let deptStore = {};  // loaded from cloud in loadFromCloud()
+let deptStore = {};
 let deptNextId = 1000;
 
 const DEPT_CATS = [
@@ -1708,13 +1681,7 @@ function delDeptEntry(catKey, id){
 // LOCALSTORAGE SYNC — saves data for display screen
 // ══════════════════════════════════════════════
 function saveToStorage(){
-  // Cloud save is handled by the Proxy + __saveCloud()
-  // Also save locally as backup
-  try {
-    localStorage.setItem('car_agents_data', JSON.stringify(__rawStore));
-    localStorage.setItem('car_dept_data',   JSON.stringify(deptStore));
-  } catch(e){}
-  __saveCloud();
+  saveToCloud();
 }
 
 var DEPT_CATS_V = [{key:'general',label:'חלפים כלליים',icon:'🔧'},{key:'tires',label:'צמיגים',icon:'🛞'},{key:'batteries',label:'מצברים',icon:'🔋'},{key:'scrap',label:'רכבים לברזל',icon:'🚗'}];
