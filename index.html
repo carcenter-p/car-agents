@@ -776,25 +776,18 @@ function saveToCloud(){ saveToStorage(); }
 
 
 // Default agents
-const DEFAULT_AGENTS = [
-  { id:1, name:"אבי לוי",      type:"רכבים", salesTarget:12, salesActual:11, ordersTarget:20, ordersActual:18, newClients:3, ordersNewTarget:4, revenue:850000, revenueTarget:1000000 },
-  { id:2, name:"מירי כהן",     type:"רכבים", salesTarget:10, salesActual:10, ordersTarget:18, ordersActual:19, newClients:5, ordersNewTarget:5, revenue:920000, revenueTarget:900000  },
-  { id:3, name:"יוסי גולן",    type:"חלפים", salesTarget:80, salesActual:74, ordersTarget:120,ordersActual:115,newClients:7, ordersNewTarget:8, revenue:320000, revenueTarget:400000  },
-  { id:4, name:"רינת שמיר",    type:"חלפים", salesTarget:90, salesActual:95, ordersTarget:130,ordersActual:138,newClients:9, ordersNewTarget:7, revenue:430000, revenueTarget:400000  },
-  { id:5, name:"דני אברהם",    type:"רכבים", salesTarget:8,  salesActual:6,  ordersTarget:15, ordersActual:11, newClients:1, ordersNewTarget:3, revenue:550000, revenueTarget:720000  },
-  { id:6, name:"חן דוד",       type:"חלפים", salesTarget:70, salesActual:68, ordersTarget:100,ordersActual:103,newClients:4, ordersNewTarget:5, revenue:290000, revenueTarget:350000  },
-  { id:7, name:"נועה פרידמן",  type:"רכבים", salesTarget:14, salesActual:15, ordersTarget:22, ordersActual:24, newClients:6, ordersNewTarget:6, revenue:1100000,revenueTarget:1000000 },
-  { id:8, name:"עמית ברק",     type:"חלפים", salesTarget:60, salesActual:55, ordersTarget:90, ordersActual:82, newClients:2, ordersNewTarget:4, revenue:240000, revenueTarget:300000  },
-];
+const DEFAULT_AGENTS = [{"id": 1, "name": "עופר", "type": "רכבים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 1000000, "revenue": 850000, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}, {"id": 2, "name": "עופר", "type": "חלפים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 440000, "revenue": 396039, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}, {"id": 3, "name": "רונן", "type": "חלפים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 440000, "revenue": 544172, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}, {"id": 4, "name": "אורן", "type": "חלפים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 340000, "revenue": 87289, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}, {"id": 5, "name": "יאיר", "type": "חלפים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 340000, "revenue": 111477, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}, {"id": 6, "name": "קורלי", "type": "חלפים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 0, "revenue": 0, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}];
+const DEFAULT_MONTH_KEY = '2026-3';
 
 function storeKey(y, m){ return `${y}-${m}`; }
 function getAgents(y, m){
   const k = storeKey(y,m);
   if(!window.__cloudLoaded){
-    // Not loaded yet — show defaults temporarily, don't write to dataStore
-    return dataStore[k] || JSON.parse(JSON.stringify(DEFAULT_AGENTS));
+    // Not loaded yet — show defaults for current month, empty for others
+    if(dataStore[k]) return dataStore[k];
+    return k === DEFAULT_MONTH_KEY ? JSON.parse(JSON.stringify(DEFAULT_AGENTS)) : [];
   }
-  // Cloud loaded — if no data for this month, start with empty array
+  // Cloud loaded — use cloud data
   if(!(k in dataStore)) dataStore[k] = [];
   return dataStore[k];
 }
