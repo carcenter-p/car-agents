@@ -703,10 +703,17 @@ function setStatus(msg, color){
 // ── LOAD ──
 async function loadFromCloud(){
   setStatus('☁️ טוען...','#4a9eff');
+  
+  // Timeout after 8 seconds
+  const controller = new AbortController();
+  const timeout = setTimeout(()=> controller.abort(), 8000);
+  
   try {
     const res = await fetch(JSONBIN_URL + '/latest', {
+      signal: controller.signal,
       headers: {'X-Master-Key': JSONBIN_KEY, 'X-Bin-Meta': 'false'}
     });
+    clearTimeout(timeout);
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const rec  = data.record || {};
@@ -727,8 +734,10 @@ async function loadFromCloud(){
     
     window.__cloudLoaded = true;
     setStatus('✅ מחובר','#22c77a');
+    console.log('Cloud loaded OK, agents:', Object.keys(dataStore));
   } catch(e) {
-    console.warn('Cloud failed, using localStorage:', e.message);
+    clearTimeout(timeout);
+    console.warn('Cloud failed:', e.message, '— using localStorage');
     try {
       const a = localStorage.getItem('car_agents_bk');
       const d = localStorage.getItem('car_dept_bk');
@@ -736,7 +745,7 @@ async function loadFromCloud(){
       if(d) { const p=JSON.parse(d); for(const k in p) deptStore[k]=p[k]; }
     } catch(e2){}
     window.__cloudLoaded = true;
-    setStatus('⚠️ אופליין','#ffb020');
+    setStatus('⚠️ אופליין - נתונים מקומיים','#ffb020');
   }
   // Render AFTER data is loaded
   renderDashboard();
