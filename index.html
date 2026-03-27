@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>קאר – מסך סוכנים 🌐 v1774611046</title>
+<title>קאר – מסך סוכנים 🌐 v1774611269</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -624,7 +624,7 @@ body{font-family:'Heebo',sans-serif;direction:rtl;min-height:100vh}
 </div>
 
 <script>
-// VERSION: 1774611046
+// VERSION: 1774611269
 function goView(){
   document.getElementById('SCR-VIEW').style.display='block';
   document.getElementById('SCR-ADMIN').style.display='none';
@@ -692,7 +692,7 @@ const SB_TABLE = 'car_data';
 const SB_ROW_KEY = 'main';
 
 async function sbGet() {
-  const res = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?key=eq.${SB_ROW_KEY}&select=value`, {
+  const res = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?select=key,value`, {
     headers: {
       'apikey': SB_KEY,
       'Authorization': 'Bearer ' + SB_KEY
@@ -701,7 +701,10 @@ async function sbGet() {
   if(!res.ok) throw new Error('GET ' + res.status);
   const rows = await res.json();
   if(!rows || rows.length === 0) return null;
-  return JSON.parse(rows[0].value);
+  // Find the row with key === SB_ROW_KEY
+  const row = rows.find(r => r.key === SB_ROW_KEY);
+  if(!row) return null;
+  return JSON.parse(row.value);
 }
 
 async function sbSet(data) {
