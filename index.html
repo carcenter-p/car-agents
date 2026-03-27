@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>קאר – מסך סוכנים 🌐 v1774609243</title>
+<title>קאר – מסך סוכנים 🌐 v1774610753</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -624,7 +624,7 @@ body{font-family:'Heebo',sans-serif;direction:rtl;min-height:100vh}
 </div>
 
 <script>
-// VERSION: 1774609243
+// VERSION: 1774610753
 function goView(){
   document.getElementById('SCR-VIEW').style.display='block';
   document.getElementById('SCR-ADMIN').style.display='none';
@@ -705,31 +705,37 @@ async function sbGet() {
 }
 
 async function sbSet(data) {
-  // Try update first, then insert
   const body = JSON.stringify({ key: SB_ROW_KEY, value: JSON.stringify(data) });
-  const upd = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?key=eq.${SB_ROW_KEY}`, {
+  const headers = {
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer ' + SB_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=minimal'
+  };
+  // First try PATCH (update existing row)
+  const patch = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?key=eq.${SB_ROW_KEY}`, {
     method: 'PATCH',
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': 'Bearer ' + SB_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal'
-    },
-    body
+    headers,
+    body: JSON.stringify({ value: JSON.stringify(data) })
   });
-  if(upd.status === 404 || upd.status === 406) {
-    // Row doesn't exist — insert
-    await fetch(`${SB_URL}/rest/v1/${SB_TABLE}`, {
+  // Check if row was updated (content-range header shows affected rows)
+  const range = patch.headers.get('content-range');
+  if(range === '0-0/*' || range === null) {
+    // No row found — INSERT
+    const ins = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}`, {
       method: 'POST',
-      headers: {
-        'apikey': SB_KEY,
-        'Authorization': 'Bearer ' + SB_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
+      headers: {...headers, 'Prefer': 'return=representation'},
       body
     });
+    if(!ins.ok) {
+      const txt = await ins.text();
+      throw new Error(`INSERT ${ins.status}: ${txt}`);
+    }
+  } else if(!patch.ok) {
+    const txt = await patch.text();
+    throw new Error(`PATCH ${patch.status}: ${txt}`);
   }
+  console.log('sbSet OK');
 }
 
 // Single source of truth
