@@ -746,6 +746,11 @@ async function loadFromCloud(){
 
 // ── SAVE to cloud (debounced 1.5s) ──
 function saveToCloud(){
+  // NEVER save before cloud has loaded — would overwrite good data with empty
+  if(!window.__cloudLoaded) {
+    console.log('saveToCloud blocked — cloud not loaded yet');
+    return;
+  }
   if(__saveTimer) clearTimeout(__saveTimer);
   __saveTimer = setTimeout(async ()=>{
     setStatus('💾 שומר...','#4a9eff');
@@ -788,13 +793,14 @@ const DEFAULT_AGENTS = [
 function storeKey(y, m){ return `${y}-${m}`; }
 function getAgents(y, m){
   const k = storeKey(y,m);
-  // Only insert defaults if cloud data hasn't loaded yet AND no local data exists
-  if(!dataStore[k] && !window.__cloudLoaded){
-    dataStore[k] = JSON.parse(JSON.stringify(DEFAULT_AGENTS));
-  } else if(!dataStore[k]){
-    // Cloud loaded but no data for this month — return empty array
-    dataStore[k] = [];
+  if(!window.__cloudLoaded){
+    // Cloud not loaded yet — return defaults WITHOUT saving to dataStore
+    // This prevents overwriting cloud data with empty/default data
+    if(!dataStore[k]) return JSON.parse(JSON.stringify(DEFAULT_AGENTS));
+    return dataStore[k];
   }
+  // Cloud loaded — use cloud data, empty array if no data for this month
+  if(!dataStore[k]) dataStore[k] = [];
   return dataStore[k];
 }
 function agents(){ return getAgents(currentYear, currentMonth); }
