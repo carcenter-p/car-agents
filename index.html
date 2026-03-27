@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>קאר – מסך סוכנים 🌐 v1774610753</title>
+<title>קאר – מסך סוכנים 🌐 v1774611046</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -624,7 +624,7 @@ body{font-family:'Heebo',sans-serif;direction:rtl;min-height:100vh}
 </div>
 
 <script>
-// VERSION: 1774610753
+// VERSION: 1774611046
 function goView(){
   document.getElementById('SCR-VIEW').style.display='block';
   document.getElementById('SCR-ADMIN').style.display='none';
@@ -705,35 +705,28 @@ async function sbGet() {
 }
 
 async function sbSet(data) {
-  const body = JSON.stringify({ key: SB_ROW_KEY, value: JSON.stringify(data) });
   const headers = {
     'apikey': SB_KEY,
     'Authorization': 'Bearer ' + SB_KEY,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=minimal'
+    'Content-Type': 'application/json'
   };
-  // First try PATCH (update existing row)
-  const patch = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?key=eq.${SB_ROW_KEY}`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify({ value: JSON.stringify(data) })
+  const valueStr = JSON.stringify(data);
+  
+  // Step 1: Delete existing row
+  await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?key=eq.${SB_ROW_KEY}`, {
+    method: 'DELETE',
+    headers
   });
-  // Check if row was updated (content-range header shows affected rows)
-  const range = patch.headers.get('content-range');
-  if(range === '0-0/*' || range === null) {
-    // No row found — INSERT
-    const ins = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}`, {
-      method: 'POST',
-      headers: {...headers, 'Prefer': 'return=representation'},
-      body
-    });
-    if(!ins.ok) {
-      const txt = await ins.text();
-      throw new Error(`INSERT ${ins.status}: ${txt}`);
-    }
-  } else if(!patch.ok) {
-    const txt = await patch.text();
-    throw new Error(`PATCH ${patch.status}: ${txt}`);
+  
+  // Step 2: Insert fresh row
+  const res = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}`, {
+    method: 'POST',
+    headers: {...headers, 'Prefer': 'return=minimal'},
+    body: JSON.stringify({ key: SB_ROW_KEY, value: valueStr })
+  });
+  if(!res.ok) {
+    const txt = await res.text();
+    throw new Error(`INSERT ${res.status}: ${txt}`);
   }
   console.log('sbSet OK');
 }
