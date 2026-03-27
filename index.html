@@ -1786,17 +1786,15 @@ function vRenderRank(ag){
 }
 setInterval(vRender,5000);
 
-buildMonthSelectors();
-loadFromCloud(); // loads cloud then renders
-
-// Expose to window for console access
-window.saveToStorage = saveToStorage;
-window.loadFromCloud = loadFromCloud;
-window.saveToCloud   = saveToCloud;
+// Expose to window FIRST (before async calls)
+window.saveToStorage   = saveToStorage;
+window.loadFromCloud   = loadFromCloud;
+window.saveToCloud     = saveToCloud;
 window.renderDashboard = renderDashboard;
-window.vRender = vRender;
-window.dataStore = dataStore;
-window.deptStore = deptStore;
+window.vRender         = vRender;
+
+buildMonthSelectors();
+loadFromCloud();
 </script>
 </body>
 </html>
