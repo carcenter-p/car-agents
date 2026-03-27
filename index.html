@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>קאר – מסך סוכנים 🌐 v1774608398</title>
+<title>קאר – מסך סוכנים 🌐 v1774609243</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -624,7 +624,7 @@ body{font-family:'Heebo',sans-serif;direction:rtl;min-height:100vh}
 </div>
 
 <script>
-// VERSION: 1774608398
+// VERSION: 1774609243
 function goView(){
   document.getElementById('SCR-VIEW').style.display='block';
   document.getElementById('SCR-ADMIN').style.display='none';
@@ -807,7 +807,7 @@ function saveToCloud(){ saveToStorage(); }
 const DEFAULT_AGENTS = [{"id": 1, "name": "עופר", "type": "רכבים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 1000000, "revenue": 850000, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}, {"id": 2, "name": "עופר", "type": "חלפים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 440000, "revenue": 396039, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}, {"id": 3, "name": "רונן", "type": "חלפים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 440000, "revenue": 544172, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}, {"id": 4, "name": "אורן", "type": "חלפים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 340000, "revenue": 87289, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}, {"id": 5, "name": "יאיר", "type": "חלפים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 340000, "revenue": 111477, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}, {"id": 6, "name": "קורלי", "type": "חלפים", "ordersTarget": 0, "ordersActual": 0, "newClients": 0, "revenueTarget": 0, "revenue": 0, "ordersNewTarget": 0, "salesTarget": 0, "salesActual": 0}];
 const DEFAULT_MONTH_KEY = '2026-3';
 
-function storeKey(y, m){ return `${y}-${m}`; }
+function storeKey(y, m){ return `${y}-${m+1}`; }
 function getAgents(y, m){
   const k = storeKey(y,m);
   if(!window.__cloudLoaded){
@@ -873,7 +873,7 @@ function buildMonthSelectors(){
     for(let y=currentYear-1; y<=currentYear+1; y++){
       for(let m=0; m<12; m++){
         const opt = document.createElement('option');
-        opt.value = `${y}-${m}`;
+        opt.value = `${y}-${m+1}`;
         opt.textContent = MONTHS[m] + ' ' + y;
         if(y===currentYear && m===currentMonth) opt.selected=true;
         sel.appendChild(opt);
@@ -883,14 +883,14 @@ function buildMonthSelectors(){
 }
 
 function onMonthChange(){
-  const [y,m] = document.getElementById('month-sel').value.split('-').map(Number);
-  currentYear=y; currentMonth=m;
+  const parts = document.getElementById('month-sel').value.split('-');
+  currentYear=Number(parts[0]); currentMonth=Number(parts[1])-1;
   document.getElementById('month-sel2').value = `${y}-${m}`;
   renderDashboard();
 }
 function onMonthChange2(){
-  const [y,m] = document.getElementById('month-sel2').value.split('-').map(Number);
-  currentYear=y; currentMonth=m;
+  const parts2 = document.getElementById('month-sel2').value.split('-');
+  currentYear=Number(parts2[0]); currentMonth=Number(parts2[1])-1;
   document.getElementById('month-sel').value = `${y}-${m}`;
   renderAgentsTable();
 }
@@ -1638,7 +1638,8 @@ function deptTotal(y, m){
 }
 
 function onDeptMonthChange(){
-  const [y,m] = document.getElementById('dept-month-sel').value.split('-').map(Number);
+  const parts3 = document.getElementById('dept-month-sel').value.split('-');
+  const y=Number(parts3[0]), m=Number(parts3[1])-1;
   currentYear=y; currentMonth=m;
   renderDeptPage();
 }
