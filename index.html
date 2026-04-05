@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>קאר – מסך סוכנים 🌐 v1775370923</title>
+<title>קאר – מסך סוכנים 🌐 v1775372397</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -741,7 +741,7 @@ body{font-family:'Heebo',sans-serif;direction:rtl;min-height:100vh}
 </div>
 
 <script>
-// VERSION: 1775370923
+// VERSION: 1775372397
 function goView(){
   document.getElementById('SCR-VIEW').style.display='block';
   document.getElementById('SCR-ADMIN').style.display='none';
@@ -2053,10 +2053,14 @@ function onPriorityMonthChange(){
   currentMonth = Number(parts[1]) - 1;
 }
 
+const PRI_PROXY = 'https://rapid-art-5e83.udigoldansky.workers.dev';
+
 async function priFetch(entity, filter){
-  let url = `${PRI_URL}/${entity}`;
-  if(filter) url += `?$filter=${encodeURIComponent(filter)}`;
-  const res = await fetch(url, {
+  let priUrl = `${PRI_URL}/${entity}`;
+  if(filter) priUrl += `?$filter=${encodeURIComponent(filter)}`;
+  // Use CORS proxy
+  const proxyUrl = PRI_PROXY + '?url=' + encodeURIComponent(priUrl);
+  const res = await fetch(proxyUrl, {
     headers: {
       'Authorization': 'Basic ' + PRI_TOKEN,
       'Accept': 'application/json'
