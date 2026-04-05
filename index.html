@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>קאר – מסך סוכנים 🌐 v1774628393</title>
+<title>קאר – מסך סוכנים 🌐 v1775370923</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -343,6 +343,7 @@ body{font-family:'Heebo',sans-serif;direction:rtl;min-height:100vh}
     <button class="nav-item" onclick="showPage('columns',this)"><span class="nav-icon">🧩</span>עמודות תצוגה</button>
     <button class="nav-item" onclick="showPage('import',this)"><span class="nav-icon">📂</span>ייבוא אקסל</button>
     <button class="nav-item" onclick="showPage('dept',this)"><span class="nav-icon">🏢</span>מכירות מחלקה</button>
+    <button class="nav-item" onclick="showPage('priority',this)"><span class="nav-icon">🔄</span>סנכרון פריורטי</button>
   </nav>
 </aside>
 
@@ -625,6 +626,66 @@ body{font-family:'Heebo',sans-serif;direction:rtl;min-height:100vh}
   </div>
 </div>
 
+<!-- ══════════════ PRIORITY SYNC ══════════════ -->
+<div class="page" id="page-priority">
+  <div class="page-hdr">
+    <div>
+      <div class="page-title">סנכרון <span>פריורטי</span></div>
+      <div class="page-sub">משיכת נתוני מכירות חודשיות מפריורטי ועדכון המסך</div>
+    </div>
+    <div class="hdr-actions">
+      <select class="month-sel" id="priority-month-sel" onchange="onPriorityMonthChange()"></select>
+      <button class="btn btn-primary" onclick="syncFromPriority()">🔄 משוך מפריורטי</button>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-body" style="display:flex;align-items:center;gap:16px">
+      <div id="priority-status" style="font-size:14px;font-weight:700;color:#8896b3">ממתין לסנכרון...</div>
+      <div id="priority-progress" style="font-size:12px;color:#4a5878"></div>
+    </div>
+  </div>
+
+  <!-- Preview table -->
+  <div class="card" id="priority-preview-card" style="display:none">
+    <div class="card-head">
+      <div class="card-head-title">👁️ תצוגה מקדימה — נתונים מפריורטי</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="cancelPrioritySync()">ביטול</button>
+        <button class="btn btn-primary btn-sm" onclick="applyPrioritySync()">✅ החל נתונים</button>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>שם סוכן</th>
+            <th>סוג</th>
+            <th>יעד מחזור ₪</th>
+            <th>מחזור בפועל ₪</th>
+            <th>יעד הזמנות</th>
+            <th>הזמנות בפועל</th>
+            <th>% עמידה</th>
+          </tr>
+        </thead>
+        <tbody id="priority-preview-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Info -->
+  <div class="card">
+    <div class="card-head"><div class="card-head-title">ℹ️ פרטי חיבור</div></div>
+    <div class="card-body">
+      <div style="font-size:13px;color:#8896b3;line-height:2">
+        <div>🔗 שרת: <strong style="color:#eef2ff">p.priority-connect.online</strong></div>
+        <div>🏢 חברה: <strong style="color:#eef2ff">acr2025</strong></div>
+        <div>📋 ישויות: <strong style="color:#eef2ff">AGENTS → QAMT_AGENTTARGET</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
 </main>
 </div>
 
@@ -680,7 +741,7 @@ body{font-family:'Heebo',sans-serif;direction:rtl;min-height:100vh}
 </div>
 
 <script>
-// VERSION: 1774628393
+// VERSION: 1775370923
 function goView(){
   document.getElementById('SCR-VIEW').style.display='block';
   document.getElementById('SCR-ADMIN').style.display='none';
@@ -919,6 +980,8 @@ function renderPage(id){
   if(id==='columns')   renderColumns();
   if(id==='import')    renderImportHistory();
   if(id==='dept')      renderDeptPage();
+  if(id==='priority')  { buildPriorityMonthSel(); }
+  if(id==='priority')  { buildPriorityMonthSel(); }
 }
 
 // ══════════════════════════════════════════════
@@ -1964,6 +2027,170 @@ document.addEventListener('fullscreenchange', ()=>{
     }
   }
 });
+
+
+// ══════════════════════════════════════════════
+// PRIORITY SYNC
+// ══════════════════════════════════════════════
+const PRI_URL   = 'https://p.priority-connect.online/odata/Priority/tabb0864.ini/acr2025';
+const PRI_TOKEN = 'QUZCQzJDQkVDQkZENEY4RUI1QzZFNDg0MDg5MzU2ODU6UEFU';
+let priorityData = []; // staged data from Priority
+
+function pSetStatus(msg, color){
+  const el = document.getElementById('priority-status');
+  if(el) { el.textContent = msg; el.style.color = color||'#8896b3'; }
+}
+function pSetProgress(msg){
+  const el = document.getElementById('priority-progress');
+  if(el) el.textContent = msg;
+}
+
+function onPriorityMonthChange(){
+  const sel = document.getElementById('priority-month-sel');
+  if(!sel) return;
+  const parts = sel.value.split('-');
+  currentYear  = Number(parts[0]);
+  currentMonth = Number(parts[1]) - 1;
+}
+
+async function priFetch(entity, filter){
+  let url = `${PRI_URL}/${entity}`;
+  if(filter) url += `?$filter=${encodeURIComponent(filter)}`;
+  const res = await fetch(url, {
+    headers: {
+      'Authorization': 'Basic ' + PRI_TOKEN,
+      'Accept': 'application/json'
+    }
+  });
+  if(!res.ok) throw new Error(`${entity}: HTTP ${res.status}`);
+  const data = await res.json();
+  return data.value || [];
+}
+
+async function syncFromPriority(){
+  pSetStatus('🔄 מתחבר לפריורטי...', '#4a9eff');
+  pSetProgress('');
+  document.getElementById('priority-preview-card').style.display = 'none';
+
+  try {
+    // Step 1: Get agents list
+    pSetProgress('שולף רשימת סוכנים...');
+    const agents = await priFetch('AGENTS');
+    pSetProgress(`נמצאו ${agents.length} סוכנים`);
+
+    // Step 2: Get targets for current month
+    const y = currentYear;
+    const m = currentMonth + 1; // 1-based
+    const monthStr = `${y}${String(m).padStart(2,'0')}`; // e.g. 202603
+
+    pSetProgress('שולף יעדים חודשיים...');
+    const targets = await priFetch('QAMT_AGENTTARGET',
+      `MONTH eq '${monthStr}'`
+    );
+    pSetProgress(`נמצאו ${targets.length} רשומות יעדים`);
+
+    // Step 3: Get actual sales
+    pSetProgress('שולף מכירות בפועל...');
+    const actuals = await priFetch('QAMT_AGENTTARGET',
+      `MONTH eq '${monthStr}'`
+    ).catch(()=>[]);
+
+    // Step 4: Build agent data
+    priorityData = agents.map((ag, idx) => {
+      const agentCode = ag.AGENTDES || ag.AGENT || ag.AGENTNAME || '';
+      const agentName = ag.AGENTDES || ag.AGENTNAME || ag.AGENT || `סוכן ${idx+1}`;
+      
+      // Find target for this agent
+      const tgt = targets.find(t =>
+        (t.AGENT === ag.AGENT || t.AGENTDES === agentCode)
+      ) || {};
+
+      // Determine type based on agent properties
+      const agType = (ag.AGENTTYPE === '2' || ag.TYPEDES === 'חלפים') ? 'חלפים' : 'רכבים';
+
+      return {
+        id: idx + 100,
+        name: agentName,
+        type: agType,
+        revenueTarget: Number(tgt.QPRICE     || tgt.TARGETAMOUNT || 0),
+        revenue:       Number(tgt.QPRICE2    || tgt.ACTUALAMOUNT || 0),
+        ordersTarget:  Number(tgt.QQUANT     || tgt.TARGETQTY    || 0),
+        ordersActual:  Number(tgt.QQUANT2    || tgt.ACTUALQTY    || 0),
+        newClients:    Number(tgt.QCUST      || 0),
+        ordersNewTarget: 0,
+        salesTarget: 0,
+        salesActual: 0,
+      };
+    }).filter(a => a.name && a.name !== '');
+
+    if(priorityData.length === 0){
+      pSetStatus('⚠️ לא נמצאו נתונים', '#ffb020');
+      return;
+    }
+
+    // Show preview
+    renderPriorityPreview();
+    pSetStatus(`✅ נמצאו ${priorityData.length} סוכנים — בדוק תצוגה מקדימה`, '#22c77a');
+
+  } catch(e) {
+    console.error('Priority sync failed:', e);
+    pSetStatus(`❌ שגיאה: ${e.message}`, '#ff5252');
+    pSetProgress('בדוק שהשרת נגיש וש-CORS מופעל');
+  }
+}
+
+function renderPriorityPreview(){
+  const tbody = document.getElementById('priority-preview-tbody');
+  if(!tbody) return;
+
+  tbody.innerHTML = priorityData.map(a => {
+    const p = a.revenueTarget ? Math.round((a.revenue/a.revenueTarget)*100) : 0;
+    const col = p>=100?'#22c77a':p>=80?'#ffb020':'#ff5252';
+    const bc = a.type==='רכבים'?'badge-cars':'badge-parts';
+    return `<tr>
+      <td><div class="td-inner" style="font-weight:700">${a.name}</div></td>
+      <td><div class="td-inner"><span class="badge-type ${bc}">${a.type}</span></div></td>
+      <td><div class="td-inner">₪${Number(a.revenueTarget).toLocaleString('he-IL')}</div></td>
+      <td><div class="td-inner" style="color:${col}">₪${Number(a.revenue).toLocaleString('he-IL')}</div></td>
+      <td><div class="td-inner">${a.ordersTarget}</div></td>
+      <td><div class="td-inner">${a.ordersActual}</div></td>
+      <td><div class="td-inner" style="font-weight:800;color:${col}">${p}%</div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('priority-preview-card').style.display = '';
+}
+
+function applyPrioritySync(){
+  if(!priorityData.length) return;
+  const k = storeKey(currentYear, currentMonth);
+  dataStore[k] = priorityData;
+  saveToStorage();
+  renderDashboard();
+  renderAgentsTable();
+  toast(`✅ יובאו ${priorityData.length} סוכנים מפריורטי!`);
+  document.getElementById('priority-preview-card').style.display = 'none';
+  pSetStatus('✅ נתונים הוחלו בהצלחה', '#22c77a');
+}
+
+function buildPriorityMonthSel(){
+  const sel = document.getElementById('priority-month-sel');
+  if(!sel || sel.options.length > 0) return;
+  for(let y=currentYear-1;y<=currentYear+1;y++){
+    for(let m=0;m<12;m++){
+      const o=document.createElement('option');
+      o.value=`${y}-${m+1}`;
+      o.textContent=MONTHS[m]+' '+y;
+      if(y===currentYear&&m===currentMonth)o.selected=true;
+      sel.appendChild(o);
+    }
+  }
+}
+function cancelPrioritySync(){
+  priorityData = [];
+  document.getElementById('priority-preview-card').style.display = 'none';
+  pSetStatus('ממתין לסנכרון...', '#8896b3');
+}
 
 // Expose to window FIRST (before async calls)
 window.saveToStorage   = saveToStorage;
